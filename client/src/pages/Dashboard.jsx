@@ -50,7 +50,33 @@ function Dashboard({ user, onLogout }) {
     productionLow: 60,
   })
   const [totals, setTotals] = useState({ consumption: 0, production: 0 })
+  const [predictions, setPredictions] = useState([])
   const [loading, setLoading] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+
+  const fetchPredictions = async () => {
+    try {
+      const response = await api.get('/predictions')
+      setPredictions(response.data || [])
+    } catch (error) {
+      console.error('Failed to fetch predictions', error)
+      toast.error('Erreur chargement prédictions')
+    }
+  }
+
+  const handleRegeneratePredictions = async () => {
+    setIsGenerating(true)
+    try {
+      await api.post('/predictions/generate')
+      toast.success('Prédictions mises à jour via Python')
+      await fetchPredictions()
+    } catch (error) {
+      console.error('Failed to regenerate predictions', error)
+      toast.error('Erreur génération prédictions')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   const alerts = useMemo(() => {
     return points
@@ -105,6 +131,7 @@ function Dashboard({ user, onLogout }) {
 
   useEffect(() => {
     fetchMetrics()
+    fetchPredictions()
   }, [])
 
   useEffect(() => {
@@ -146,8 +173,7 @@ function Dashboard({ user, onLogout }) {
     alerts.slice(0, 5).forEach((alert, index) => {
       const y = 80 + index * 8
       doc.text(
-        `${formatFullDate(alert.timestamp)} - Consommation ${
-          alert.consumption
+        `${formatFullDate(alert.timestamp)} - Consommation ${alert.consumption
         } kWh / Production ${alert.production} kWh`,
         14,
         y
@@ -295,6 +321,50 @@ function Dashboard({ user, onLogout }) {
           </div>
         </div>
 
+        <div className="card chart-card">
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3>Prédictions IA (Python)</h3>
+              <p className="muted">Probabilité consommation à 24H</p>
+            </div>
+            <button
+              className="secondary-button"
+              onClick={handleRegeneratePredictions}
+              disabled={isGenerating}
+              style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+            >
+              {isGenerating ? 'Calcul en cours...' : 'Régénérer via Python'}
+            </button>
+          </div>
+          <div className="chart-wrapper">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={predictions}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="timestamp"
+                  tickFormatter={(val) => new Date(val).toLocaleTimeString('fr-FR', { hour: '2-digit' })}
+                />
+                <YAxis />
+                <Tooltip
+                  formatter={(value) => `${value} kWh`}
+                  labelFormatter={(value) => formatFullDate(value)}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="predicted_consumption"
+                  name="Conso. Prédite"
+                  stroke="#8884d8"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid chart-grid">
         <div className="card chart-card">
           <div className="card-header">
             <h3>Focus sur les alertes</h3>

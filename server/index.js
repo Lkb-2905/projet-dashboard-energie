@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -168,6 +170,40 @@ app.get("/api/metrics", (req, res) => {
   } else {
     sendPayload(generateSeries({ from, to }));
   }
+});
+
+app.get("/api/predictions", (req, res) => {
+  const predictionPath = path.join(__dirname, "..", "data-science", "predictions.json");
+
+  if (fs.existsSync(predictionPath)) {
+    try {
+      const data = fs.readFileSync(predictionPath, "utf-8");
+      const predictions = JSON.parse(data);
+      res.json(predictions);
+    } catch (error) {
+      console.error("Error reading predictions:", error);
+      res.status(500).json({ error: "Failed to read predictions" });
+    }
+  } else {
+    // If no prediction file, return empty or trigger generation (optional)
+    res.json([]);
+  }
+});
+
+const { exec } = require("child_process");
+
+app.post("/api/predictions/generate", (req, res) => {
+  const pythonPath = "C:\\Users\\pc\\.pyenv\\pyenv-win\\versions\\3.12.10\\python.exe";
+  const scriptPath = path.join(__dirname, "..", "data-science", "analysis.py");
+
+  exec(`"${pythonPath}" "${scriptPath}"`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Exec error: ${error}`);
+      return res.status(500).json({ error: "Failed to generate predictions" });
+    }
+    console.log(`Python stdout: ${stdout}`);
+    res.json({ success: true, message: "Predictions regenerated" });
+  });
 });
 
 app.listen(PORT, () => {
