@@ -1,89 +1,135 @@
-# 🛡️ PCR - Plan de Continuité et de Reprise d'Activité
-> **Système de Supervision Énergétique (SP-E)**  
-> **Classification :** Interne / Critique  
-> **Version :** 1.0 - Production  
-> **Responsable :** [Votre Nom]
+# 🔰 DOSSIER DE SÉCURITÉ ET CONTINUITÉ (PCR/PRA)
+# ⚡ SP-E : Système de Pilotage Énergétique
+**Gestion de Crise • Continuité Logistique • Résilience IA**
+
+**Classification:** Confidentiel (Interne TotalEnergies) | **Version:** 1.2.0  
+**Responsable:** KAMENI TCHOUATCHEU GAETAN BRUNEL
 
 ---
 
-## 1. Contexte et Enjeux Critiques
-Ce document définit la stratégie de **résilience** et de **remise en service** de la plateforme de supervision énergétique SP-E.  
-Dans un contexte de **pilotage logistique (Supply Chain)** au sein de TotalEnergies, l'indisponibilité de cet outil entraînerait une perte de visibilité sur les flux, compromettant la prise de décision opérationnelle.
+🔍 **[Analyse BIA](#-analyse-biam)** • 🛡️ **[Stratégies PCA](#-stratégies-de-continuité-pca)** • 🔄 **[Procédures PRA](#-procédures-de-reprise-pra)** • 📝 **[Maintenance MCO](#-maintenance--tests-mco)**
+
+---
+
+## 📋 TABLE DES MATIÈRES
+1.  [Contexte & Enjeux Critiques](#-contexte-et-enjeux-critiques)
+2.  [Analyse d'Impact Métier (BIA)](#-analyse-d-impact-m%C3%A9tier-bia)
+3.  [Stratégies de Continuité (PCA)](#-strat%C3%A9gies-de-continuit%C3%A9-pca)
+4.  [Procédures de Reprise (PRA)](#-proc%C3%A9dures-de-reprise-pra)
+5.  [Maintenance & Tests (MCO)](#-maintenance--tests-mco)
+6.  [Annexe Technique](#-annexe-technique)
+
+---
+
+## 🚨 CONTEXTE ET ENJEUX CRITIQUES
+
+Ce plan définit la stratégie de **résilience opérationnelle** du Dashboard SP-E.  
+Dans un contexte de **Flux Tendus (Just-in-Time)** sur la Supply Chain, toute interruption de service > 1h entraîne une perte de visibilité sur l'équilibre *Offre/Demande*.
 
 **Objectifs du PCR :**
-1.  Garantir la disponibilité des indicateurs clés (KPI) même en cas de panne externe.
-2.  Assurer l'intégrité des modèles prédictifs (IA).
-3.  Minimiser le temps d'interruption (RTO) et la perte de données (RPO).
+*   **Disponibilité (99.9%) :** Garantir l'affichage des KPIs même en mode dégradé.
+*   **Intégrité IA :** Assurer que les prédictions (Python) restent cohérentes ou sont remplacées par des modèles statistiques de repli.
+*   **Traçabilité :** Tout incident doit être logué pour le RETEX (Retour d'Expérience).
 
 ---
 
-## 2. Analyse des Risques et Impact (BIA)
+## 🔍 ANALYSE D'IMPACT MÉTIER (BIA)
 
-| Risque Identifié | Probabilité | Impact Métier | Sévérité |
+### Cartographie des Risques
+
+| Menace Identifiée | Probabilité | Impact Métier | Sévérité |
 | :--- | :---: | :--- | :---: |
-| **Panne API Externe (Open-Meteo)** | Forte | Perte des données temps réel externes. | 🟠 Majeur |
-| **Crash du Moteur IA (Python)** | Moyenne | Indisponibilité des prévisions à J+1. | 🟠 Majeur |
-| **Crash Serveur Application (Node.js)** | Faible | Écran noir pour les opérateurs. | 🔴 Critique |
-| **Perte de connectivité Base de Données** | Faible | Impossibilité de lire l'historique. | 🔴 Critique |
+| **Coupure API Externe** (Météo) | Élevée (3/5) | Perte des données climatiques temps réel. | 🟠 Majeur |
+| **Crash Moteur Python** | Moyenne (2/5) | Impossibilité de régénérer les prévisions à J+1. | 🟠 Majeur |
+| **Panne Serveur Node.js** | Faible (1/5) | "Blackout" complet pour l'opérateur (Écran blanc). | 🔴 Critique |
+| **Corruption Base de Données** | Très Faible | Perte de l'historique long terme. | 🔴 Critique |
+
+### Métriques de Performance (SLA)
+*   **RTO (Recovery Time Objective)** : < 5 minutes.
+    *   *Temps maximal toléré pour relancer le service critique.*
+*   **RPO (Recovery Point Objective)** : < 1 heure.
+    *   *Perte de données maximale acceptable en cas de crash.*
 
 ---
 
-## 3. Stratégies de Continuité (PCA - Business Continuity)
+## 🛡️ STRATÉGIES DE CONTINUITÉ (PCA)
 
-Le PCA repose sur une architecture **"Failover-By-Design"** (Basculement par conception).
+Le PCA repose sur l'approche **"Failover-By-Design"** : le système est conçu pour dégrader ses fonctionnalités sans s'arrêter.
 
-### 3.1. Gestion de la Défaillance des Données (Fallback Automatique)
-L'application intègre un mécanisme de **redondance hybride** au niveau du backend Node.js.
+### 1. Gestion de la Défaillance des Données (Auto-Fallback)
+Le backend Node.js intègre un circuit breaker pattern.
 
-*   **Mode Nominal :** Le système interroge l'API Open-Meteo pour les données réelles.
-*   **Incident détecté :** Timeout > 5000ms ou erreur 500 sur l'API externe.
-*   **Basculement (Failover) :** Le backend bascule **instantanément et automatiquement** sur le générateur de données simulées (`generateSeries`).
-*   **Résultat pour l'utilisateur :** Transparence totale. Le Dashboard reste fonctionnel, une notification "Mode Dégradé" alerte l'opérateur que les données sont estimées.
+*   **⚡ Mode Nominal :** Le système interroge `api.open-meteo.com`.
+*   **🚨 Incident Détecté :** Timeout > 5000ms ou HTTP 5xx.
+*   **🔄 Basculement Auto :** Le servie `DataService` bascule instantanément sur le **Générateur Synthétique Local**.
+*   **👁️ Conséquence Utilisateur :** Transparence totale. Une notification "Mode Estimation" apparaît, mais le pilotage continue.
 
-### 3.2. Continuité du Service IA
-Le module de Data Science est découplé (architecture asynchrone).
-*   En cas de non-réponse du script Python, l'API sert la **dernière prédiction validée** (mise en cache JSON).
-*   L'opérationnel conserve la vision J+1 précédente plutôt qu'une absence d'information.
+### 2. Résilience du Moteur IA
+Le module Data Science est asynchrone et découplé.
+
+*   **Problème :** Le script Python ne répond plus ou crashe (Memory Leak).
+*   **Solution :** L'API sert la dernière version du fichier `predictions.json` mise en cache.
+*   **Bénéfice :** L'opérateur conserve la vision prédictive précédente (J-1) plutôt qu'une absence d'information.
 
 ---
 
-## 4. Stratégies de Reprise (PRA - Disaster Recovery)
+## 🔄 PROCÉDURES DE REPRISE (PRA)
 
-En cas de crash système majeur, les procédures suivantes s'appliquent pour respecter les SLA.
+En cas d'incident majeur nécessitant une intervention humaine, suivre cette procédure stricte.
 
-### 4.1. Indicateurs de Performance (SLA)
-*   **RTO (Recovery Time Objective) :** < 5 minutes. (Temps max. pour relancer le service).
-*   **RPO (Recovery Point Objective) :** < 1 heure. (Perte de données max. tolérée).
+### 4.1. Protocole "FAST REBOOT"
+Si le Dashboard ne répond plus, l'astreinte technique doit exécuter le script PowerShell d'urgence :
 
-### 4.2. Procédure de Restauration Rapide (Fast Recovery)
-Le projet est conçu pour être "Stateless" et conteneurisable, permettant une réinstanciation immédiate.
-
-**Script de relance d'urgence (PowerShell) :**
 ```powershell
-# 1. Arrêt forcé des processus zombie
-Stop-Process -Name "node", "python" -Force -ErrorAction SilentlyContinue
+# SCRIPT DE RÉCUPÉRATION D'URGENCE (Windows)
 
-# 2. Nettoyage des caches temporaires
+# 1. Kill des processus zombies
+Stop-Process -Name "node", "python" -Force -ErrorAction SilentlyContinue 
+Write-Host "✅ Processus nettoyés."
+
+# 2. Purge des caches corrompus
 Remove-Item "data-science/predictions.json" -ErrorAction SilentlyContinue
+Write-Host "✅ Cache IA purgé."
 
-# 3. Redémarrage Séquentiel
-Start-Process -FilePath "npm" -ArgumentList "run dev" -WorkingDirectory "./server"
-Start-Process -FilePath "npm" -ArgumentList "run dev" -WorkingDirectory "./client"
+# 3. Relance Séquentielle
+Start-Process "npm" -ArgumentList "run dev" -WorkingDirectory "./server"
+Start-Process "npm" -ArgumentList "run dev" -WorkingDirectory "./client"
+Write-Host "🚀 Services redémarrés. Tentative de régénération IA..."
 
-# 4. Régénération à froid des modèles IA
+# 4. Forçage du recalcul IA
 Invoke-WebRequest -Method Post -Uri "http://localhost:4000/api/predictions/generate"
 ```
 
-### 4.3. Gestion des Sauvegardes
-*   **Code Source :** Versionning Git avec réplication distante.
-*   **Données Critiques :** Les données logistiques exportées (CSV/PDF) sont stockées localement sur les postes clients, assurant une décentralisation de l'information.
+### 4.2. Stratégie de Sauvegarde (Backup)
+*   **Code Source :** Réplication Git temps réel (GitHub + GitLab Interne).
+*   **Données Critiques :** Les données exportées par les opérateurs (CSV/PDF) sont stockées localement sur les postes de travail (Local First), garantissant une continuité décentralisée.
 
 ---
 
-## 5. Tests et Maintenance du Plan (MCO)
+## 📝 MAINTENANCE & TESTS (MCO)
 
-Pour garantir l'efficacité de ce PCR, des simulations sont effectuées :
-1.  **Test de coupure réseau :** Simulation d'indisponibilité d'Open-Meteo pour valider le passage en mode "Simulé".
-2.  **Test de corruption IA :** Suppression du fichier `predictions.json` pour vérifier la résilience de l'API.
+La résilience se teste. Un exercice de simulation est obligatoire tous les trimestres.
 
-> **Validation :** Ce plan assure que l'outil de pilotage reste disponible à **99.9%** pour les équipes Supply Chain de TotalEnergies.
+### Scénarios de Test
+1.  **"Chaos Monkey" Réseau :**
+    *   *Action :* Couper la connexion internet du serveur.
+    *   *Attendu :* Le Dashboard doit passer en mode "Simulé" sans erreur 500.
+2.  **"Crash Test" Python :**
+    *   *Action :* Supprimer `analysis.py` pendant l'exécution.
+    *   *Attendu :* L'API doit retourner le JSON en cache ou une erreur "Service Indisponible" propre (404/503), sans planter le Node.js.
+
+---
+
+## 🔧 ANNEXE TECHNIQUE
+
+### Contacts d'Astreinte
+*   **Responsable Technique :** Kameni Tchouatcheu (Ext. 06.XX.XX.XX.XX)
+*   **Support DevOps :** support-it@totalenergies.com
+
+### Versions Validées
+*   **Python :** 3.12.x (Dépendances figées via `requirements.txt`)
+*   **Node.js :** 20.x LTS
+
+---
+*Ce document est la propriété de la Direction Supply & Logistique.*
+**Dernière mise à jour :** 19/02/2026 par G.B.K.T.
