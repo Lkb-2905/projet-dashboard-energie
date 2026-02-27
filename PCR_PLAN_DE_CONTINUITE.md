@@ -2,7 +2,7 @@
 # ⚡ SP-E : Système de Pilotage Énergétique
 **Gestion de Crise • Continuité Logistique • Résilience IA**
 
-**Classification:** Confidentiel (Interne TotalEnergies) | **Version:** 1.2.0  
+**Classification:** Confidentiel (Interne Acme Energy) | **Version:** 1.2.0  
 **Responsable:** KAMENI TCHOUATCHEU GAETAN BRUNEL
 
 ---
@@ -124,7 +124,7 @@ La résilience se teste. Un exercice de simulation est obligatoire tous les trim
 
 ### Contacts d'Astreinte
 *   **Responsable Technique :** Kameni Tchouatcheu (Ext. 06.XX.XX.XX.XX)
-*   **Support DevOps :** support-it@totalenergies.com
+*   **Support DevOps :** support-it@acme-energy.com
 
 ### Versions Validées
 *   **Python :** 3.12.x (Dépendances figées via `requirements.txt`)

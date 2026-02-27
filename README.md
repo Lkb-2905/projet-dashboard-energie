@@ -260,7 +260,7 @@ Ce projet est développé dans un cadre académique et professionnel. Droits ré
 
 ### 🙏 REMERCIEMENTS
 *   **Open-Meteo :** Pour l'API de données climatiques.
-*   **TotalEnergies :** Pour l'inspiration des cas d'usage industriels.
+*   **Acme Energy :** Pour l'inspiration des cas d'usage industriels.
 *   **ESIEA :** Pour l'excellence de la formation ingénieur.
 
 ⭐ *Si ce projet vous semble pertinent pour la Supply Chain de demain, laissez une étoile !*  
